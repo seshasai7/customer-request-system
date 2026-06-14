@@ -1,0 +1,43 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+.Spotlight-V100
+.Trashes
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+.history/
+*.code-workspace
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.orig
+~$*
+
+# Local config / secrets — never commit real Apps Script URLs or passwords
+.env
+.env.local
+.env.*.local
+*.local
+config.local.js
+secrets.json
+
+# Build / dependency artefacts (none expected — project is dependency-free,
+# but listed in case future tooling is added)
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+
+# Netlify CLI cache (if you use it for deploys)
+.netlify/

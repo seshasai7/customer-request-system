@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Customer Request System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   SAVON LIQUOR & WINE — Customer Request System
+   Single-file HTML app. Backend = Google Apps Script Web App.
+   See <!-- SETUP INSTRUCTIONS --> at bottom of this file.
+===================================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-0: #0a0a0f;
+  --bg-1: #12121a;
+  --bg-2: #1a1a25;
+  --bg-3: #22222e;
+  --surface: rgba(30, 30, 45, 0.6);
+  --surface-2: rgba(40, 40, 55, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f5f5f7;
+  --text-dim: #a8a8b3;
+  --text-faint: #6b6b78;
+  --accent: #dc2626;
+  --accent-hover: #ef4444;
+  --accent-glow: rgba(220, 38, 38, 0.35);
+  --gold: #d4a574;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+html, body {
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animated background glow */
+body::before {
+  content: '';
+  position: fixed;
+  top: -300px; left: -300px;
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(220,38,38,0.18) 0%, transparent 70%);
+  filter: blur(60px);
+  z-index: 0;
+  pointer-events: none;
+  animation: drift1 18s ease-in-out infinite alternate;
+}
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -300px; right: -300px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(212,165,116,0.12) 0%, transparent 70%);
+  filter: blur(60px);
+  z-index: 0;
+  pointer-events: none;
+  animation: drift2 22s ease-in-out infinite alternate;
+}
+@keyframes drift1 {
+  to { transform: translate(200px, 100px) scale(1.1); }
+}
+@keyframes drift2 {
+  to { transform: translate(-200px, -100px) scale(1.15); }
+}
+
+/* === HEADER === */
+header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 36px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 15, 0.6);
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+.logo-wrap img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.logo-fallback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.logo-fallback .lf-text {
+  font-size: 28px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.logo-fallback .lf-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  background: var(--accent);
+  margin: 0 4px;
+}
+.logo-fallback .lf-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.4em;
+  margin-top: -2px;
+}
+.logo-fallback .lf-bottle, .logo-fallback .lf-glass {
+  font-size: 22px;
+  opacity: 0.8;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* === BUTTONS === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.btn-secondary:hover {
+  background: var(--bg-3);
+  border-color: rgba(255,255,255,0.25);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+.btn-danger {
+  background: rgba(220, 38, 38, 0.12);
+  color: #ff7878;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.btn-danger:hover {
+  background: rgba(220, 38, 38, 0.2);
+}
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-lg { padding: 14px 28px; font-size: 16px; }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* === MAIN === */
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 36px 80px;
+}
+
+.view { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* === CUSTOMER VIEW (HERO) === */
+.hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.hero-eyebrow {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(220, 38, 38, 0.12);
+  color: #ff8a8a;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(34px, 5vw, 52px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #fff 0%, #d4a574 60%, #fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  color: var(--text-dim);
+  font-size: 17px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* === FORM CARD === */
+.card {
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px;
+  box-shadow: var(--shadow-lg);
+}
+.card-narrow {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Type toggle (Spirits / Beer) */
+.type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding: 6px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+}
+.type-option:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.type-option.active {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.18), rgba(220, 38, 38, 0.05));
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.type-option .ico { font-size: 28px; margin-bottom: 6px; }
+.type-option .lbl { font-weight: 600; font-size: 15px; }
+.type-option .desc { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+
+/* Form fields */
+.field {
+  margin-bottom: 20px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 540px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+label .req { color: var(--accent); margin-left: 2px; }
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+input::placeholder, textarea::placeholder { color: var(--text-faint); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-2);
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.15);
+}
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%23a8a8b3' d='M6 8L2 4h8z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+textarea { resize: vertical; min-height: 80px; }
+
+.help-text { font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+
+/* === ADMIN / STORE DASHBOARD === */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.dash-title { font-size: 28px; font-weight: 700; font-family: 'Playfair Display', serif; }
+.dash-sub { color: var(--text-dim); margin-top: 4px; }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+.stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.stat-value { font-size: 32px; font-weight: 700; margin-top: 6px; color: #fff; }
+.stat-meta { font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: #fff; border-bottom-color: var(--accent); }
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.filters select, .filters input {
+  padding: 8px 12px;
+  font-size: 13px;
+  width: auto;
+  min-width: 140px;
+}
+.filters .grow { flex: 1; min-width: 200px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-1); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 14px 16px; text-align: left; }
+th {
+  background: var(--bg-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface); }
+td.muted { color: var(--text-faint); }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-spirits { background: rgba(212, 165, 116, 0.15); color: #d4a574; border: 1px solid rgba(212, 165, 116, 0.3); }
+.badge-beer { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-pending { background: rgba(168, 168, 179, 0.12); color: #c8c8d0; border: 1px solid rgba(168, 168, 179, 0.2); }
+.badge-ordered { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-fulfilled { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-not_available { background: rgba(220, 38, 38, 0.12); color: #ff7878; border: 1px solid rgba(220, 38, 38, 0.3); }
+
+/* Disclaimer note on customer form */
+.disclaimer {
+  margin: 8px 0 20px;
+  padding: 14px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.disclaimer strong { color: #fbbf24; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-faint);
+}
+.empty-state .ico { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+/* Stores list (admin) */
+.store-list { display: grid; gap: 12px; }
+.store-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.store-row .info { flex: 1; }
+.store-row .name { font-weight: 600; color: #fff; }
+.store-row .email { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.store-row .actions { display: flex; gap: 8px; }
+
+/* === MODAL === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 10, 0.75);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: fadeIn 0.2s;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 440px;
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; font-family: 'Playfair Display', serif; }
+.modal p.sub { color: var(--text-dim); margin-bottom: 24px; font-size: 14px; }
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.modal-close:hover { background: var(--surface); color: var(--text); }
+.modal-wrap { position: relative; }
+
+/* === TOAST === */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast {
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  min-width: 280px;
+  max-width: 380px;
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s cubic-bezier(0.4,0,0.2,1);
+  pointer-events: auto;
+  font-size: 14px;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--accent); }
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.toast-title { font-weight: 600; margin-bottom: 2px; }
+.toast-msg { color: var(--text-dim); font-size: 13px; }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Footer */
+footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--text-faint);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  header { padding: 14px 20px; }
+  .logo-wrap img { height: 44px; }
+  main { padding: 32px 20px 60px; }
+  .card { padding: 24px; }
+  .modal { padding: 24px; }
+  .header-actions .btn span.txt { display: none; }
+  .header-actions .btn { padding: 10px 12px; }
+}
+
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="logo-wrap" onclick="showView('customer')">
+    <!-- Drop your transparent-PNG logo file next to this HTML as logo.png. Falls back to a styled text logo if not present. -->
+    <img id="logoImg" src="logo.png" alt="Savon Liquor & Wine" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';" />
+    <div id="logoFallback" class="logo-fallback" style="display:none;">
+      <div>
+        <div class="lf-text">
+          <span class="lf-bottle">🍾</span>
+          <span>SAVON</span>
+          <span class="lf-dot"></span>
+          <span>LIQUOR</span>
+          <span class="lf-glass">🍷</span>
+        </div>
+        <div class="lf-sub">LIQUOR &nbsp;&amp;&nbsp; WINE</div>
+      </div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="openModal('storeLoginModal')">
+      🏪 <span class="txt">Store Login</span>
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('adminLoginModal')">
+      🔐 <span class="txt">Admin</span>
+    </button>
+  </div>
+</header>
+
+<!-- ============ CUSTOMER REQUEST VIEW ============ -->
+<main id="view-customer" class="view">
+  <div class="hero">
+    <div class="hero-eyebrow">Couldn't Find What You Wanted?</div>
+    <h1>Request It &mdash; We'll Order It In</h1>
+    <p>Tell us the spirit, wine, or beer you were looking for and which store you'd like to pick it up at. Your request goes straight to the store manager.</p>
+  </div>
+
+  <div class="card card-narrow">
+    <form id="requestForm">
+      <div class="type-toggle">
+        <div class="type-option active" data-type="spirits" onclick="selectType('spirits')">
+          <div class="ico">🥃</div>
+          <div class="lbl">Spirits / Wine</div>
+          <div class="desc">Whiskey, vodka, wine, etc.</div>
+        </div>
+        <div class="type-option" data-type="beer" onclick="selectType('beer')">
+          <div class="ico">🍺</div>
+          <div class="lbl">Beer</div>
+          <div class="desc">Bottles, cans, packs</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="storeSelect">Pickup Store <span class="req">*</span></label>
+        <select id="storeSelect" required>
+          <option value="">— Select your preferred store —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="itemName">Item / Brand Name <span class="req">*</span></label>
+        <input type="text" id="itemName" placeholder="e.g. Buffalo Trace Bourbon" required />
+      </div>
+
+      <!-- SPIRITS-ONLY FIELDS -->
+      <div id="spiritsFields">
+        <div class="field">
+          <label for="bottleSize">Bottle Size <span class="req">*</span></label>
+          <select id="bottleSize">
+            <option value="">— Select size —</option>
+            <option value="50ml">50 ml (mini)</option>
+            <option value="100ml">100 ml</option>
+            <option value="200ml">200 ml</option>
+            <option value="375ml">375 ml (half pint)</option>
+            <option value="750ml">750 ml (standard fifth)</option>
+            <option value="1L">1 Liter</option>
+            <option value="1.75L">1.75 L (handle)</option>
+            <option value="Other">Other / not sure</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- BEER-ONLY FIELDS -->
+      <div id="beerFields" hidden>
+        <div class="field-row">
+          <div class="field">
+            <label for="container">Container <span class="req">*</span></label>
+            <select id="container">
+              <option value="">— Select —</option>
+              <option value="Bottles">Bottles</option>
+              <option value="Cans">Cans</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="packSize">Pack Size <span class="req">*</span></label>
+            <input type="text" id="packSize" placeholder="e.g. 6 pack, 12 pack, 24 case" />
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="customerName">Your Name <span class="req">*</span></label>
+        <input type="text" id="customerName" placeholder="So we know who to thank" required />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="customerEmail">Email <span class="req">*</span></label>
+          <input type="email" id="customerEmail" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="customerPhone">Phone Number <span class="req">*</span></label>
+          <input type="tel" id="customerPhone" placeholder="(555) 123-4567" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Notes <span style="color:var(--text-faint);font-weight:400;">(optional)</span></label>
+        <textarea id="notes" placeholder="Vintage year, distillery, region, anything that helps us find it"></textarea>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Please note:</strong> items will be ordered or made available only upon availability with our distributors. We cannot guarantee that every requested item can be added to our shelves. <span class="brand-store-name">Savon Liquor &amp; Wine</span> reserves the right to decline a request if the item is unavailable. You will receive an email update once the store manager reviews your request.
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
+        Submit Request
+      </button>
+      <p class="help-text" style="text-align:center; margin-top:14px;">
+        Your request will be sent to the store manager. You'll hear back once it's reviewed.
+      </p>
+    </form>
+  </div>
+</main>
+
+<!-- ============ ADMIN DASHBOARD ============ -->
+<main id="view-admin" class="view" hidden>
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">Admin Dashboard</div>
+      <div class="dash-sub">All customer requests across every store</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="loadAllRequests()">↻ Refresh</button>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="adminStats"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="requests" onclick="switchTab('admin', 'requests')">Requests</button>
+    <button class="tab" data-tab="stores" onclick="switchTab('admin', 'stores')">Stores</button>
+    <button class="tab" data-tab="notifications" onclick="switchTab('admin', 'notifications')">Notification Emails</button>
+    <button class="tab" data-tab="email" onclick="switchTab('admin', 'email')">Weekly Email</button>
+  </div>
+
+  <!-- Admin: Requests tab -->
+  <div id="admin-tab-requests" class="card">
+    <div class="filters">
+      <select id="filterStore" onchange="renderAdminRequests()">
+        <option value="">All stores</option>
+      </select>
+      <select id="filterType" onchange="renderAdminRequests()">
+        <option value="">All types</option>
+        <option value="spirits">Spirits / Wine</option>
+        <option value="beer">Beer</option>
+      </select>
+      <select id="filterStatus" onchange="renderAdminRequests()">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="ordered">Ordered</option>
+        <option value="fulfilled">Fulfilled</option>
+        <option value="not_available">Not Available</option>
+      </select>
+      <input type="search" id="filterSearch" class="grow" placeholder="Search item, customer..." oninput="renderAdminRequests()" />
+    </div>
+    <div id="adminRequestsTable"></div>
+  </div>
+
+  <!-- Admin: Stores tab -->
+  <div id="admin-tab-stores" class="card" hidden>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <div style="font-size:18px; font-weight:600;">Manage Stores</div>
+        <div style="font-size:13px; color:var(--text-dim); margin-top:2px;">Add, edit, or remove stores. Each store gets its own weekly email digest.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('addStoreModal')">+ Add Store</button>
+    </div>
+    <div class="store-list" id="storeList"></div>
+  </div>
+
+  <!-- Admin: Notification Emails tab -->
+  <div id="admin-tab-notifications" class="card" hidden>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; gap:16px; flex-wrap:wrap;">
+      <div>
+        <div style="font-size:18px; font-weight:600;">Master Notification Emails</div>
+        <div style="font-size:13px; color:var(--text-dim); margin-top:4px; max-width:560px;">
+          These addresses get an <strong>instant CC</strong> on every new customer request, an <strong>instant notification</strong> every time a store manager changes a request's status, the <strong>weekly master change log</strong>, and the <strong>stale-pending alert</strong> when any request has been sitting in "Pending" for 7+ days with no action taken.
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('addAdminEmailModal')">+ Add Email</button>
+    </div>
+    <div class="store-list" id="adminEmailsList"></div>
+    <div style="margin-top:24px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="sendMasterListNow()">📊 Send Master Change Log Now</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendStaleAlertNow()">⏰ Send Stale-Pending Alert Now</button>
+    </div>
+    <div id="masterListResult" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- Admin: Weekly Email tab -->
+  <div id="admin-tab-email" class="card" hidden>
+    <div style="font-size:18px; font-weight:600; margin-bottom:6px;">Weekly Digest Email (per store)</div>
+    <p style="color:var(--text-dim); margin-bottom:24px;">
+      Each Sunday at <strong>8:00 PM</strong>, every store gets an automatic email with all of the past week's pending requests &mdash; sent for free by Google Apps Script. You can also send the digest manually right now.
+    </p>
+    <button class="btn btn-primary" onclick="sendWeeklyEmailNow()">📧 Send Weekly Digest Now</button>
+    <div id="emailResult" style="margin-top:20px;"></div>
+    <div style="margin-top:32px; padding:20px; background:var(--bg-1); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-weight:600; margin-bottom:8px;">⚙️ Configure Auto-Send</div>
+      <p style="font-size:13px; color:var(--text-dim);">
+        Three scheduled jobs run from Apps Script: <code>sendWeeklyDigest</code> (Sundays 8pm — per-store digest), <code>sendMasterChangeLog</code> (Sundays 9pm — admin emails), and <code>checkStalePending</code> (every Monday 7am — admin emails). Change schedules in Apps Script &rarr; Triggers.
+      </p>
+    </div>
+  </div>
+</main>
+
+<!-- ============ STORE DASHBOARD ============ -->
+<main id="view-store" class="view" hidden>
+  <div class="dash-header">
+    <div>
+      <div class="dash-title" id="storeDashTitle">Store Dashboard</div>
+      <div class="dash-sub" id="storeDashSub"></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="loadStoreRequests()">↻ Refresh</button>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="storeStats"></div>
+
+  <div class="card">
+    <div class="filters">
+      <select id="storeFilterType" onchange="renderStoreRequests()">
+        <option value="">All types</option>
+        <option value="spirits">Spirits / Wine</option>
+        <option value="beer">Beer</option>
+      </select>
+      <select id="storeFilterStatus" onchange="renderStoreRequests()">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="ordered">Ordered</option>
+        <option value="fulfilled">Fulfilled</option>
+        <option value="not_available">Not Available</option>
+      </select>
+      <input type="search" id="storeFilterSearch" class="grow" placeholder="Search item, customer..." oninput="renderStoreRequests()" />
+    </div>
+    <div id="storeRequestsTable"></div>
+  </div>
+</main>
+
+<!-- ============ MODALS ============ -->
+
+<!-- Admin login -->
+<div class="modal-overlay" id="adminLoginModal">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('adminLoginModal')">&times;</button>
+      <h2>Admin Sign In</h2>
+      <p class="sub">Enter your admin password to manage requests and stores.</p>
+      <form id="adminLoginForm">
+        <div class="field">
+          <label for="adminPassword">Password</label>
+          <input type="password" id="adminPassword" placeholder="••••••••" required autofocus />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Store login -->
+<div class="modal-overlay" id="storeLoginModal">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('storeLoginModal')">&times;</button>
+      <h2>Store Sign In</h2>
+      <p class="sub">Sign in as a store to view requests sent to you.</p>
+      <form id="storeLoginForm">
+        <div class="field">
+          <label for="storeLoginSelect">Store</label>
+          <select id="storeLoginSelect" required>
+            <option value="">— Select store —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="storePassword">Password</label>
+          <input type="password" id="storePassword" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add store -->
+<div class="modal-overlay" id="addStoreModal">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('addStoreModal')">&times;</button>
+      <h2 id="addStoreTitle">Add Store</h2>
+      <p class="sub">Stores in this list appear in the customer form's pickup dropdown and receive weekly digest emails.</p>
+      <form id="addStoreForm">
+        <input type="hidden" id="editStoreOriginalName" value="" />
+        <div class="field">
+          <label for="newStoreName">Store Name</label>
+          <input type="text" id="newStoreName" placeholder="e.g. Downtown" required />
+        </div>
+        <div class="field">
+          <label for="newStoreEmail">Manager Email</label>
+          <input type="email" id="newStoreEmail" placeholder="manager@store.com" required />
+        </div>
+        <div class="field">
+          <label for="newStorePassword">Login Password (for store portal)</label>
+          <input type="text" id="newStorePassword" placeholder="Leave blank to auto-generate from store name" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Save Store</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Status change modal (for Ordered / Not Available — both need extra info from the manager) -->
+<div class="modal-overlay" id="statusChangeModal">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="cancelStatusChange()">&times;</button>
+      <h2 id="statusModalTitle">Mark as Ordered</h2>
+      <p class="sub" id="statusModalSub">An email will be sent to the customer with the details below.</p>
+      <form id="statusChangeForm">
+        <input type="hidden" id="statusChangeId" />
+        <input type="hidden" id="statusChangeNew" />
+
+        <!-- Ordered: expected available date -->
+        <div class="field" id="expectedDateField" hidden>
+          <label for="expectedDate">Expected Available Date <span class="req">*</span></label>
+          <input type="date" id="expectedDate" />
+          <div class="help-text">Customer will be told the item is expected on this date. A disclaimer about distributor availability is included automatically.</div>
+        </div>
+
+        <!-- Not Available: reason -->
+        <div class="field" id="reasonField" hidden>
+          <label for="statusReason">Reason / Comment to Customer <span class="req">*</span></label>
+          <textarea id="statusReason" rows="3" placeholder="e.g. This item has been discontinued by the distributor and is no longer available."></textarea>
+          <div class="help-text">This message is forwarded to the customer in their notification email.</div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-ghost btn-block" onclick="cancelStatusChange()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-block" id="statusChangeSubmit">Save &amp; Email Customer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add admin notification email modal -->
+<div class="modal-overlay" id="addAdminEmailModal">
+  <div class="modal-wrap">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('addAdminEmailModal')">&times;</button>
+      <h2>Add Notification Email</h2>
+      <p class="sub">This address will receive the master change log and stale-pending alerts.</p>
+      <form id="addAdminEmailForm">
+        <div class="field">
+          <label for="newAdminEmail">Email Address</label>
+          <input type="email" id="newAdminEmail" placeholder="owner@example.com" required autofocus />
+        </div>
+        <div class="field">
+          <label for="newAdminEmailLabel">Label <span style="color:var(--text-faint);font-weight:400;">(optional)</span></label>
+          <input type="text" id="newAdminEmailLabel" placeholder="e.g. Owner, District Manager" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Add</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container" id="toastContainer"></div>
+
+<footer>
+  <div>© Savon Liquor &amp; Wine &nbsp;·&nbsp; Customer Request System &nbsp;·&nbsp; <span style="opacity:0.6;">v1.1</span></div>
+  <div style="margin-top:8px; font-size:12px;">
+    Designed &amp; built by <strong style="color:var(--text-dim);">Savon Nexo LLC</strong> &mdash;
+    crafting modern tools for modern retailers. Let's build yours too:
+    <a href="https://www.savonnexo.com" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:none; font-weight:500;">www.savonnexo.com</a>
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   VERSION
+===================================================================== */
+const APP_VERSION = '1.2';
+
+/* =====================================================================
+   BRAND — edit this single block to white-label the whole app.
+   Defaults below are Savon Liquor & Wine. See BRANDING.md for the full guide.
+===================================================================== */
+const BRAND = {
+  // --- Identity (shown across the app + in emails) ---
+  storeName:      'Savon Liquor & Wine',
+  shortName:      'Savon',                       // used in email subject prefixes
+  storeWebsite:   'https://customerrequestform.netlify.app',
+
+  // --- Customer form copy ---
+  heroEyebrow:    "Couldn't Find What You Wanted?",
+  heroTitle:      "Request It — We'll Order It In",
+  heroSubtitle:   "Tell us the spirit, wine, or beer you were looking for and which store you'd like to pick it up at. Your request goes straight to the store manager.",
+  pageTitleSuffix: '— Customer Request',         // appended to storeName for <title>
+
+  // --- Visual ---
+  primaryColor:   '#dc2626',                     // accent (buttons, badges, links)
+  goldColor:      '#d4a574',                     // secondary accent
+  darkBg:         '#0a0a0f',                     // page background
+
+  // --- Logo ---
+  logoFile:       'logo.png',                    // drop a transparent PNG next to index.html
+
+  // --- "Built by" attribution (footer + emails) ---
+  builtBy:        'Savon Nexo LLC',
+  builtByUrl:     'https://www.savonnexo.com',
+  builtByTagline: "crafting modern tools for modern retailers. Let's build yours too:",
+};
+
+/* =====================================================================
+   CONFIG — paste your values here after setup (see SETUP.md)
+===================================================================== */
+const CONFIG = {
+  // 1) Paste your Google Apps Script Web App URL here
+  WEB_APP_URL: 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE',
+
+  // 2) Admin password — CHANGE THIS before going live
+  ADMIN_PASSWORD: 'CHANGE_ME',
+
+  // 3) Initial stores baked in (demo mode only; firstTimeSetup() seeds the
+  //    Stores sheet once the backend is wired up).
+  INITIAL_STORES: [
+    { name: 'Store 1', email: 'store1@example.com', password: 'store1' },
+    { name: 'Store 2', email: 'store2@example.com', password: 'store2' },
+    { name: 'Store 3', email: 'store3@example.com', password: 'store3' },
+  ],
+};
+
+/* =====================================================================
+   STATE
+===================================================================== */
+const STATE = {
+  type: 'spirits',
+  stores: [],
+  requests: [],
+  session: null, // { kind: 'admin' | 'store', storeName?: string }
+};
+
+/* =====================================================================
+   API LAYER
+===================================================================== */
+const API = {
+  async call(action, params = {}, method = 'GET') {
+    if (!CONFIG.WEB_APP_URL || CONFIG.WEB_APP_URL.startsWith('PASTE')) {
+      // Demo / offline fallback so the page still works before backend is wired
+      return DEMO.handle(action, params, method);
+    }
+    const url = new URL(CONFIG.WEB_APP_URL);
+    url.searchParams.set('action', action);
+    if (method === 'GET') {
+      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      const r = await fetch(url, { method: 'GET' });
+      return r.json();
+    } else {
+      // POST as text/plain to avoid Apps Script CORS preflight
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...params }),
+      });
+      return r.json();
+    }
+  },
+  listStores()           { return this.call('listStores'); },
+  listRequests(storeName){ return this.call('listRequests', storeName ? { store: storeName } : {}); },
+  createRequest(data)    { return this.call('createRequest', data, 'POST'); },
+  addStore(data)         { return this.call('addStore', data, 'POST'); },
+  updateStore(data)      { return this.call('updateStore', data, 'POST'); },
+  deleteStore(name)      { return this.call('deleteStore', { name }, 'POST'); },
+  updateStatus(payload)  { return this.call('updateStatus', payload, 'POST'); },
+  sendWeeklyEmail()      { return this.call('sendWeeklyEmailNow', {}, 'POST'); },
+  listAdminEmails()      { return this.call('listAdminEmails'); },
+  addAdminEmail(data)    { return this.call('addAdminEmail', data, 'POST'); },
+  deleteAdminEmail(email){ return this.call('deleteAdminEmail', { email }, 'POST'); },
+  sendMasterList()       { return this.call('sendMasterChangeLogNow', {}, 'POST'); },
+  sendStaleAlert()       { return this.call('sendStalePendingAlertNow', {}, 'POST'); },
+};
+
+/* =====================================================================
+   DEMO MODE — works in-browser before backend is configured
+===================================================================== */
+const DEMO = {
+  init() {
+    if (!localStorage.getItem('demo_stores')) {
+      localStorage.setItem('demo_stores', JSON.stringify(CONFIG.INITIAL_STORES));
+    }
+    if (!localStorage.getItem('demo_requests')) {
+      localStorage.setItem('demo_requests', JSON.stringify([]));
+    }
+    if (!localStorage.getItem('demo_adminEmails')) {
+      localStorage.setItem('demo_adminEmails', JSON.stringify([]));
+    }
+    if (!localStorage.getItem('demo_auditLog')) {
+      localStorage.setItem('demo_auditLog', JSON.stringify([]));
+    }
+  },
+  _stores() { return JSON.parse(localStorage.getItem('demo_stores') || '[]'); },
+  _requests() { return JSON.parse(localStorage.getItem('demo_requests') || '[]'); },
+  _adminEmails() { return JSON.parse(localStorage.getItem('demo_adminEmails') || '[]'); },
+  _save(k, v) { localStorage.setItem('demo_' + k, JSON.stringify(v)); },
+  handle(action, params, method) {
+    this.init();
+    switch (action) {
+      case 'listStores':
+        return Promise.resolve({ ok: true, stores: this._stores() });
+      case 'listRequests': {
+        let r = this._requests();
+        if (params.store) r = r.filter(x => x.store === params.store);
+        return Promise.resolve({ ok: true, requests: r });
+      }
+      case 'createRequest': {
+        const r = this._requests();
+        const item = { id: 'r_' + Date.now(), timestamp: new Date().toISOString(), status: 'pending', ...params };
+        delete item.action;
+        r.unshift(item);
+        this._save('requests', r);
+        return Promise.resolve({ ok: true });
+      }
+      case 'addStore': {
+        const s = this._stores();
+        if (s.find(x => x.name.toLowerCase() === params.name.toLowerCase())) {
+          return Promise.resolve({ ok: false, error: 'Store already exists' });
+        }
+        s.push({ name: params.name, email: params.email, password: params.password || params.name.toLowerCase() });
+        this._save('stores', s);
+        return Promise.resolve({ ok: true });
+      }
+      case 'updateStore': {
+        let s = this._stores();
+        const idx = s.findIndex(x => x.name === params.original);
+        if (idx < 0) return Promise.resolve({ ok: false, error: 'Not found' });
+        s[idx] = { name: params.name, email: params.email, password: params.password || s[idx].password };
+        this._save('stores', s);
+        return Promise.resolve({ ok: true });
+      }
+      case 'deleteStore': {
+        const s = this._stores().filter(x => x.name !== params.name);
+        this._save('stores', s);
+        return Promise.resolve({ ok: true });
+      }
+      case 'updateStatus': {
+        const r = this._requests();
+        const item = r.find(x => x.id === params.id);
+        if (item) {
+          item.status = params.status;
+          if (params.managerComment) item.managerComment = params.managerComment;
+          if (params.expectedDate)   item.expectedDate   = params.expectedDate;
+        }
+        this._save('requests', r);
+        return Promise.resolve({ ok: true, demo: true });
+      }
+      case 'listAdminEmails':
+        return Promise.resolve({ ok: true, emails: this._adminEmails() });
+      case 'addAdminEmail': {
+        const e = this._adminEmails();
+        if (e.find(x => x.email.toLowerCase() === params.email.toLowerCase())) {
+          return Promise.resolve({ ok: false, error: 'Email already in the list' });
+        }
+        e.push({ email: params.email, label: params.label || '' });
+        this._save('adminEmails', e);
+        return Promise.resolve({ ok: true });
+      }
+      case 'deleteAdminEmail': {
+        const e = this._adminEmails().filter(x => x.email !== params.email);
+        this._save('adminEmails', e);
+        return Promise.resolve({ ok: true });
+      }
+      case 'sendWeeklyEmailNow':
+      case 'sendMasterChangeLogNow':
+      case 'sendStalePendingAlertNow':
+        return Promise.resolve({ ok: true, sent: 0, demo: true, note: 'Demo mode: emails are not actually sent. Configure Apps Script to enable real sending.' });
+      default:
+        return Promise.resolve({ ok: false, error: 'Unknown action' });
+    }
+  }
+};
+
+/* =====================================================================
+   UI HELPERS
+===================================================================== */
+function $(id) { return document.getElementById(id); }
+function showView(name) {
+  ['customer', 'admin', 'store'].forEach(v => {
+    const el = $('view-' + v);
+    if (el) el.hidden = (v !== name);
+  });
+}
+function openModal(id) { $(id).classList.add('active'); }
+function closeModal(id) { $(id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
+});
+
+function toast(title, msg, kind = 'success') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = `<div class="toast-title">${title}</div>${msg ? `<div class="toast-msg">${msg}</div>` : ''}`;
+  $('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 4000);
+  setTimeout(() => el.remove(), 4400);
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/* =====================================================================
+   CUSTOMER FORM
+===================================================================== */
+function selectType(t) {
+  STATE.type = t;
+  document.querySelectorAll('.type-option').forEach(o => o.classList.toggle('active', o.dataset.type === t));
+  $('spiritsFields').hidden = (t !== 'spirits');
+  $('beerFields').hidden = (t !== 'beer');
+  // Toggle required attributes appropriately
+  $('bottleSize').required = (t === 'spirits');
+  $('container').required = (t === 'beer');
+  $('packSize').required = (t === 'beer');
+}
+
+async function loadStores() {
+  try {
+    const res = await API.listStores();
+    if (res.ok) {
+      STATE.stores = res.stores;
+      populateStoreDropdowns();
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Could not load stores', 'Check your backend configuration.', 'error');
+  }
+}
+
+function populateStoreDropdowns() {
+  const opts = STATE.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  $('storeSelect').innerHTML = '<option value="">— Select your preferred store —</option>' + opts;
+  $('storeLoginSelect').innerHTML = '<option value="">— Select store —</option>' + opts;
+  const fs = $('filterStore');
+  if (fs) fs.innerHTML = '<option value="">All stores</option>' + opts;
+}
+
+$('requestForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const email = $('customerEmail').value.trim();
+  const phone = $('customerPhone').value.trim();
+  const data = {
+    type: STATE.type,
+    store: $('storeSelect').value,
+    itemName: $('itemName').value.trim(),
+    bottleSize: STATE.type === 'spirits' ? $('bottleSize').value : '',
+    container: STATE.type === 'beer' ? $('container').value : '',
+    packSize: STATE.type === 'beer' ? $('packSize').value.trim() : '',
+    customerName: $('customerName').value.trim(),
+    customerEmail: email,
+    customerPhone: phone,
+    customerContact: email, // kept for backward compatibility with v0/v1.0 data
+    notes: $('notes').value.trim(),
+  };
+
+  try {
+    const res = await API.createRequest(data);
+    if (res.ok) {
+      toast('Request submitted!', 'The store manager will be notified.', 'success');
+      $('requestForm').reset();
+      selectType('spirits');
+    } else {
+      toast('Could not submit', res.error || 'Please try again.', 'error');
+    }
+  } catch (err) {
+    toast('Network error', err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Submit Request';
+  }
+});
+
+/* =====================================================================
+   AUTH
+===================================================================== */
+$('adminLoginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = $('adminPassword').value;
+  if (pw === CONFIG.ADMIN_PASSWORD) {
+    STATE.session = { kind: 'admin' };
+    closeModal('adminLoginModal');
+    $('adminPassword').value = '';
+    showView('admin');
+    await loadAllRequests();
+    renderStoreList();
+  } else {
+    toast('Incorrect password', '', 'error');
+  }
+});
+
+$('storeLoginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const storeName = $('storeLoginSelect').value;
+  const pw = $('storePassword').value;
+  const store = STATE.stores.find(s => s.name === storeName);
+  if (!store) { toast('Select a store', '', 'error'); return; }
+  if (pw !== store.password) { toast('Incorrect password', '', 'error'); return; }
+  STATE.session = { kind: 'store', storeName };
+  closeModal('storeLoginModal');
+  $('storePassword').value = '';
+  $('storeDashTitle').textContent = storeName + ' — Requests';
+  $('storeDashSub').textContent = 'Customer requests sent to your store';
+  showView('store');
+  await loadStoreRequests();
+});
+
+function logout() {
+  STATE.session = null;
+  showView('customer');
+}
+
+/* =====================================================================
+   ADMIN — DATA
+===================================================================== */
+async function loadAllRequests() {
+  try {
+    const res = await API.listRequests();
+    if (res.ok) {
+      STATE.requests = res.requests;
+      renderAdminStats();
+      renderAdminRequests();
+    }
+  } catch (e) { console.error(e); }
+}
+
+function renderAdminStats() {
+  const r = STATE.requests;
+  const now = Date.now();
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thisWeek = r.filter(x => new Date(x.timestamp).getTime() > weekAgo);
+  const pending = r.filter(x => x.status === 'pending');
+  const byStore = {};
+  thisWeek.forEach(x => byStore[x.store] = (byStore[x.store] || 0) + 1);
+  const topStore = Object.entries(byStore).sort((a, b) => b[1] - a[1])[0];
+
+  $('adminStats').innerHTML = `
+    <div class="stat"><div class="stat-label">Total Requests</div><div class="stat-value">${r.length}</div><div class="stat-meta">All time</div></div>
+    <div class="stat"><div class="stat-label">This Week</div><div class="stat-value">${thisWeek.length}</div><div class="stat-meta">Last 7 days</div></div>
+    <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${pending.length}</div><div class="stat-meta">Awaiting order</div></div>
+    <div class="stat"><div class="stat-label">Top Store</div><div class="stat-value" style="font-size:22px;">${topStore ? topStore[0] : '—'}</div><div class="stat-meta">${topStore ? topStore[1] + ' requests this week' : 'No data yet'}</div></div>
+  `;
+}
+
+function renderAdminRequests() {
+  const store = $('filterStore').value;
+  const type = $('filterType').value;
+  const status = $('filterStatus').value;
+  const search = $('filterSearch').value.toLowerCase();
+
+  let r = STATE.requests;
+  if (store) r = r.filter(x => x.store === store);
+  if (type) r = r.filter(x => x.type === type);
+  if (status) r = r.filter(x => x.status === status);
+  if (search) r = r.filter(x =>
+    (x.itemName || '').toLowerCase().includes(search) ||
+    (x.customerName || '').toLowerCase().includes(search) ||
+    (x.notes || '').toLowerCase().includes(search)
+  );
+
+  $('adminRequestsTable').innerHTML = renderRequestsTable(r, true);
+}
+
+function renderRequestsTable(requests, isAdmin) {
+  if (requests.length === 0) {
+    return `<div class="empty-state"><div class="ico">📭</div><div>No requests match the current filters.</div></div>`;
+  }
+  return `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Date</th>
+      <th>Type</th>
+      ${isAdmin ? '<th>Store</th>' : ''}
+      <th>Item</th>
+      <th>Details</th>
+      <th>Customer</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${requests.map(r => {
+        const statusExtra = r.status === 'ordered' && r.expectedDate
+          ? `<div style="font-size:11px;color:var(--text-faint);margin-top:3px;">ETA ${escapeHtml(r.expectedDate)}</div>`
+          : (r.status === 'not_available' && r.managerComment
+            ? `<div style="font-size:11px;color:var(--text-faint);margin-top:3px;" title="${escapeHtml(r.managerComment)}">${escapeHtml(String(r.managerComment).slice(0, 40))}${String(r.managerComment).length > 40 ? '…' : ''}</div>`
+            : '');
+        return `
+        <tr>
+          <td class="muted">${formatDate(r.timestamp)}</td>
+          <td><span class="badge badge-${r.type}">${r.type}</span></td>
+          ${isAdmin ? `<td>${escapeHtml(r.store || '')}</td>` : ''}
+          <td><strong>${escapeHtml(r.itemName || '')}</strong>${r.notes ? `<div style="font-size:12px;color:var(--text-faint);margin-top:2px;">${escapeHtml(r.notes)}</div>` : ''}</td>
+          <td class="muted">${r.type === 'spirits' ? escapeHtml(r.bottleSize || '—') : `${escapeHtml(r.container || '—')} · ${escapeHtml(r.packSize || '—')}`}</td>
+          <td class="muted">${escapeHtml(r.customerName || '—')}${r.customerEmail ? `<div style="font-size:12px;">${escapeHtml(r.customerEmail)}</div>` : ''}${r.customerPhone ? `<div style="font-size:12px;">${escapeHtml(r.customerPhone)}</div>` : ''}${(!r.customerEmail && !r.customerPhone && r.customerContact) ? `<div style="font-size:12px;">${escapeHtml(r.customerContact)}</div>` : ''}</td>
+          <td><span class="badge badge-${r.status}">${(r.status || '').replace('_', ' ')}</span>${statusExtra}</td>
+          <td>
+            <select class="status-select" data-id="${r.id}" data-old="${r.status}" style="font-size:12px; padding:4px 8px;" onchange="onStatusSelectChange(this)">
+              <option value="pending" ${r.status === 'pending' ? 'selected' : ''}>Pending</option>
+              <option value="ordered" ${r.status === 'ordered' ? 'selected' : ''}>Ordered</option>
+              <option value="fulfilled" ${r.status === 'fulfilled' ? 'selected' : ''}>Fulfilled</option>
+              <option value="not_available" ${r.status === 'not_available' ? 'selected' : ''}>Not Available</option>
+            </select>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+/* Status dropdown change — for "ordered" and "not_available" we open a modal
+   to collect the required extra info before saving. For "pending" / "fulfilled"
+   we save immediately. */
+let _pendingStatusChange = null; // { id, oldStatus, newStatus, selectEl }
+
+function onStatusSelectChange(selectEl) {
+  const id = selectEl.dataset.id;
+  const oldStatus = selectEl.dataset.old;
+  const newStatus = selectEl.value;
+  if (oldStatus === newStatus) return;
+
+  if (newStatus === 'ordered' || newStatus === 'not_available') {
+    _pendingStatusChange = { id, oldStatus, newStatus, selectEl };
+    openStatusChangeModal(newStatus);
+    return;
+  }
+  // Pending / Fulfilled — save immediately
+  saveStatusChange({ id, status: newStatus });
+}
+
+function openStatusChangeModal(newStatus) {
+  $('statusChangeId').value = _pendingStatusChange.id;
+  $('statusChangeNew').value = newStatus;
+  $('expectedDate').value = '';
+  $('statusReason').value = '';
+
+  if (newStatus === 'ordered') {
+    $('statusModalTitle').textContent = 'Mark as Ordered';
+    $('statusModalSub').textContent = 'The customer will be emailed that the item is on order, including the disclaimer about distributor availability.';
+    $('expectedDateField').hidden = false;
+    $('reasonField').hidden = true;
+    $('expectedDate').required = true;
+    $('statusReason').required = false;
+    // Default ETA = 14 days from now
+    const eta = new Date(Date.now() + 14 * 86400000);
+    $('expectedDate').value = eta.toISOString().slice(0, 10);
+  } else {
+    $('statusModalTitle').textContent = 'Mark as Not Available';
+    $('statusModalSub').textContent = 'The customer will be emailed with your reason for declining the request.';
+    $('expectedDateField').hidden = true;
+    $('reasonField').hidden = false;
+    $('expectedDate').required = false;
+    $('statusReason').required = true;
+  }
+  openModal('statusChangeModal');
+}
+
+function cancelStatusChange() {
+  if (_pendingStatusChange) {
+    // Revert dropdown to its previous value
+    _pendingStatusChange.selectEl.value = _pendingStatusChange.oldStatus;
+  }
+  _pendingStatusChange = null;
+  closeModal('statusChangeModal');
+}
+
+$('statusChangeForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!_pendingStatusChange) return;
+  const payload = {
+    id: _pendingStatusChange.id,
+    status: _pendingStatusChange.newStatus,
+    changedBy: STATE.session?.kind === 'store' ? STATE.session.storeName : 'admin',
+  };
+  if (_pendingStatusChange.newStatus === 'ordered') {
+    payload.expectedDate = $('expectedDate').value;
+    if (!payload.expectedDate) { toast('Expected date required', '', 'error'); return; }
+  } else if (_pendingStatusChange.newStatus === 'not_available') {
+    payload.managerComment = $('statusReason').value.trim();
+    if (!payload.managerComment) { toast('Reason required', 'Please add a comment for the customer.', 'error'); return; }
+  }
+  const ok = await saveStatusChange(payload);
+  if (ok) {
+    closeModal('statusChangeModal');
+    _pendingStatusChange = null;
+  }
+});
+
+async function saveStatusChange(payload) {
+  if (!payload.changedBy) {
+    payload.changedBy = STATE.session?.kind === 'store' ? STATE.session.storeName : 'admin';
+  }
+  const res = await API.updateStatus(payload);
+  if (res.ok) {
+    const item = STATE.requests.find(x => x.id === payload.id);
+    if (item) {
+      item.status = payload.status;
+      if (payload.expectedDate)    item.expectedDate    = payload.expectedDate;
+      if (payload.managerComment)  item.managerComment  = payload.managerComment;
+    }
+    if (STATE.session?.kind === 'admin') { renderAdminStats(); renderAdminRequests(); }
+    if (STATE.session?.kind === 'store') { renderStoreStats(); renderStoreRequests(); }
+    toast('Status updated', res.demo ? 'Demo mode — no actual email sent.' : 'Customer notification email sent.', 'success');
+    return true;
+  } else {
+    toast('Failed', res.error || '', 'error');
+    return false;
+  }
+}
+
+function switchTab(scope, tab) {
+  document.querySelectorAll(`#view-${scope} .tab`).forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  ['requests', 'stores', 'notifications', 'email'].forEach(t => {
+    const el = $(`${scope}-tab-${t}`);
+    if (el) el.hidden = (t !== tab);
+  });
+  if (tab === 'stores') renderStoreList();
+  if (tab === 'notifications') loadAdminEmails();
+}
+
+/* === Stores management === */
+function renderStoreList() {
+  $('storeList').innerHTML = STATE.stores.map(s => `
+    <div class="store-row">
+      <div class="info">
+        <div class="name">${escapeHtml(s.name)}</div>
+        <div class="email">${escapeHtml(s.email)} &nbsp;·&nbsp; password: <code>${escapeHtml(s.password || '—')}</code></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" onclick='editStore(${JSON.stringify(s).replace(/'/g, "&#39;")})'>Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteStore('${escapeHtml(s.name)}')">Delete</button>
+      </div>
+    </div>
+  `).join('') || `<div class="empty-state"><div class="ico">🏪</div><div>No stores yet. Add your first one!</div></div>`;
+}
+
+function editStore(s) {
+  $('addStoreTitle').textContent = 'Edit Store';
+  $('editStoreOriginalName').value = s.name;
+  $('newStoreName').value = s.name;
+  $('newStoreEmail').value = s.email;
+  $('newStorePassword').value = s.password || '';
+  openModal('addStoreModal');
+}
+
+$('addStoreForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const original = $('editStoreOriginalName').value;
+  const data = {
+    name: $('newStoreName').value.trim(),
+    email: $('newStoreEmail').value.trim(),
+    password: $('newStorePassword').value.trim(),
+  };
+  let res;
+  if (original) {
+    res = await API.updateStore({ original, ...data });
+  } else {
+    res = await API.addStore(data);
+  }
+  if (res.ok) {
+    toast(original ? 'Store updated' : 'Store added', '', 'success');
+    closeModal('addStoreModal');
+    $('addStoreForm').reset();
+    $('editStoreOriginalName').value = '';
+    $('addStoreTitle').textContent = 'Add Store';
+    await loadStores();
+    renderStoreList();
+  } else {
+    toast('Could not save', res.error || '', 'error');
+  }
+});
+
+async function deleteStore(name) {
+  if (!confirm(`Delete store "${name}"? This cannot be undone.`)) return;
+  const res = await API.deleteStore(name);
+  if (res.ok) {
+    toast('Store deleted', '', 'success');
+    await loadStores();
+    renderStoreList();
+  }
+}
+
+/* === Weekly email === */
+async function sendWeeklyEmailNow() {
+  $('emailResult').innerHTML = '<div class="spinner"></div> Sending...';
+  const res = await API.sendWeeklyEmail();
+  if (res.ok) {
+    if (res.demo) {
+      $('emailResult').innerHTML = `<div style="padding:14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#fbbf24;">⚠️ ${res.note}</div>`;
+    } else {
+      $('emailResult').innerHTML = `<div style="padding:14px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px; color:#34d399;">✅ Weekly digest sent to ${res.sent} store(s).</div>`;
+    }
+  } else {
+    $('emailResult').innerHTML = `<div style="padding:14px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:8px; color:#ff7878;">❌ ${res.error || 'Failed to send'}</div>`;
+  }
+}
+
+/* =====================================================================
+   STORE — DATA
+===================================================================== */
+async function loadStoreRequests() {
+  const storeName = STATE.session?.storeName;
+  if (!storeName) return;
+  const res = await API.listRequests(storeName);
+  if (res.ok) {
+    STATE.requests = res.requests;
+    renderStoreStats();
+    renderStoreRequests();
+  }
+}
+
+function renderStoreStats() {
+  const r = STATE.requests;
+  const now = Date.now();
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thisWeek = r.filter(x => new Date(x.timestamp).getTime() > weekAgo).length;
+  const pending = r.filter(x => x.status === 'pending').length;
+  const fulfilled = r.filter(x => x.status === 'fulfilled').length;
+
+  $('storeStats').innerHTML = `
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-value">${r.length}</div><div class="stat-meta">All time</div></div>
+    <div class="stat"><div class="stat-label">This Week</div><div class="stat-value">${thisWeek}</div><div class="stat-meta">Last 7 days</div></div>
+    <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${pending}</div><div class="stat-meta">Need to order</div></div>
+    <div class="stat"><div class="stat-label">Fulfilled</div><div class="stat-value">${fulfilled}</div><div class="stat-meta">Customer notified</div></div>
+  `;
+}
+
+function renderStoreRequests() {
+  const type = $('storeFilterType').value;
+  const status = $('storeFilterStatus').value;
+  const search = $('storeFilterSearch').value.toLowerCase();
+  let r = STATE.requests;
+  if (type) r = r.filter(x => x.type === type);
+  if (status) r = r.filter(x => x.status === status);
+  if (search) r = r.filter(x =>
+    (x.itemName || '').toLowerCase().includes(search) ||
+    (x.customerName || '').toLowerCase().includes(search) ||
+    (x.notes || '').toLowerCase().includes(search)
+  );
+  $('storeRequestsTable').innerHTML = renderRequestsTable(r, false);
+}
+
+/* =====================================================================
+   ADMIN NOTIFICATION EMAILS
+===================================================================== */
+async function loadAdminEmails() {
+  try {
+    const res = await API.listAdminEmails();
+    if (res.ok) renderAdminEmailsList(res.emails || []);
+  } catch (e) { console.error(e); }
+}
+
+function renderAdminEmailsList(emails) {
+  $('adminEmailsList').innerHTML = emails.length === 0
+    ? `<div class="empty-state"><div class="ico">📭</div><div>No notification emails yet. Add one to receive the master change log and stale-pending alerts.</div></div>`
+    : emails.map(e => `
+        <div class="store-row">
+          <div class="info">
+            <div class="name">${escapeHtml(e.email)}</div>
+            ${e.label ? `<div class="email">${escapeHtml(e.label)}</div>` : ''}
+          </div>
+          <div class="actions">
+            <button class="btn btn-danger btn-sm" onclick="removeAdminEmail('${escapeHtml(e.email)}')">Remove</button>
+          </div>
+        </div>`).join('');
+}
+
+$('addAdminEmailForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const res = await API.addAdminEmail({
+    email: $('newAdminEmail').value.trim(),
+    label: $('newAdminEmailLabel').value.trim(),
+  });
+  if (res.ok) {
+    toast('Email added', '', 'success');
+    closeModal('addAdminEmailModal');
+    $('addAdminEmailForm').reset();
+    loadAdminEmails();
+  } else {
+    toast('Could not add', res.error || '', 'error');
+  }
+});
+
+async function removeAdminEmail(email) {
+  if (!confirm(`Remove "${email}" from notifications?`)) return;
+  const res = await API.deleteAdminEmail(email);
+  if (res.ok) {
+    toast('Removed', '', 'success');
+    loadAdminEmails();
+  }
+}
+
+async function sendMasterListNow() {
+  $('masterListResult').innerHTML = '<div class="spinner"></div> Sending...';
+  const res = await API.sendMasterList();
+  $('masterListResult').innerHTML = formatEmailResult(res, 'Master change log');
+}
+async function sendStaleAlertNow() {
+  $('masterListResult').innerHTML = '<div class="spinner"></div> Sending...';
+  const res = await API.sendStaleAlert();
+  $('masterListResult').innerHTML = formatEmailResult(res, 'Stale-pending alert');
+}
+function formatEmailResult(res, what) {
+  if (!res.ok) return `<div style="padding:14px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:8px; color:#ff7878;">❌ ${res.error || 'Failed to send'}</div>`;
+  if (res.demo)  return `<div style="padding:14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#fbbf24;">⚠️ ${res.note || ''}</div>`;
+  return `<div style="padding:14px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px; color:#34d399;">✅ ${what} sent to ${res.sent} recipient(s).</div>`;
+}
+
+
+/* =====================================================================
+   BRAND APPLICATION — runs once at init, populates text + CSS variables
+   driven by the BRAND config object at the top of this script.
+===================================================================== */
+function applyBrand() {
+  const root = document.documentElement;
+  root.style.setProperty('--accent', BRAND.primaryColor);
+  root.style.setProperty('--accent-hover', shadeHex(BRAND.primaryColor, 0.15));
+  root.style.setProperty('--accent-glow', hexToRgba(BRAND.primaryColor, 0.35));
+  root.style.setProperty('--gold', BRAND.goldColor);
+  root.style.setProperty('--bg-0', BRAND.darkBg);
+
+  document.title = BRAND.storeName + ' ' + BRAND.pageTitleSuffix;
+
+  const logoImg = $('logoImg');
+  if (logoImg) { logoImg.src = BRAND.logoFile; logoImg.alt = BRAND.storeName; }
+  const logoFallback = document.querySelector('#logoFallback');
+  if (logoFallback) {
+    const words = String(BRAND.storeName).split(' ');
+    const main = words[0] || BRAND.storeName;
+    const sub  = words.slice(1).join(' ');
+    logoFallback.innerHTML =
+      '<div><div class="lf-text"><span class="lf-bottle">🍾</span><span>' +
+      escapeHtml(main) + '</span><span class="lf-dot"></span><span class="lf-glass">🍷</span></div>' +
+      '<div class="lf-sub">' + escapeHtml(sub || '') + '</div></div>';
+  }
+
+  const eyebrow = document.querySelector('.hero-eyebrow');
+  if (eyebrow) eyebrow.textContent = BRAND.heroEyebrow;
+  const h1 = document.querySelector('.hero h1');
+  if (h1) h1.textContent = BRAND.heroTitle;
+  const heroP = document.querySelector('.hero p');
+  if (heroP) heroP.textContent = BRAND.heroSubtitle;
+
+  document.querySelectorAll('.brand-store-name').forEach(el => { el.textContent = BRAND.storeName; });
+
+  const footer = document.querySelector('footer');
+  if (footer) {
+    const domain = String(BRAND.builtByUrl).replace(/^https?:\/\//, '').replace(/\/$/, '');
+    footer.innerHTML =
+      '<div>© ' + escapeHtml(BRAND.storeName) + ' &nbsp;·&nbsp; Customer Request System &nbsp;·&nbsp; <span style="opacity:0.6;">v' + APP_VERSION + '</span></div>' +
+      '<div style="margin-top:8px; font-size:12px;">Designed &amp; built by <strong style="color:var(--text-dim);">' +
+      escapeHtml(BRAND.builtBy) + '</strong> &mdash; ' + escapeHtml(BRAND.builtByTagline) +
+      ' <a href="' + String(BRAND.builtByUrl).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:none; font-weight:500;">' +
+      escapeHtml(domain) + '</a></div>';
+  }
+}
+
+function shadeHex(hex, amount) {
+  const m = /^#?([a-f0-9]{6})$/i.exec(String(hex).trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 0xff) + 255 * amount)));
+  const g = Math.max(0, Math.min(255, Math.round(((n >> 8)  & 0xff) + 255 * amount)));
+  const b = Math.max(0, Math.min(255, Math.round((n         & 0xff) + 255 * amount)));
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+function hexToRgba(hex, alpha) {
+  const m = /^#?([a-f0-9]{6})$/i.exec(String(hex).trim());
+  if (!m) return 'rgba(0,0,0,' + alpha + ')';
+  const n = parseInt(m[1], 16);
+  return 'rgba(' + ((n >> 16) & 0xff) + ',' + ((n >> 8) & 0xff) + ',' + (n & 0xff) + ',' + alpha + ')';
+}
+
+/* =====================================================================
+   INIT
+===================================================================== */
+(async function init() {
+  applyBrand();
+  selectType('spirits');
+  await loadStores();
+  console.log(BRAND.storeName + ' — Customer Request System v' + APP_VERSION);
+})();
+</script>
+
+<!-- =====================================================================
+SETUP INSTRUCTIONS — read me, then delete this whole comment if you like
+=====================================================================
+
+This page works in two modes:
+
+  A) DEMO MODE  (default if WEB_APP_URL is left as the placeholder)
+     - All data lives in your browser's localStorage
+     - Form submissions, store edits, etc. all work
+     - The "Send Weekly Digest Now" button does nothing real
+     - Great for trying the UI before hooking up the backend
+
+  B) LIVE MODE  (after you paste your Apps Script Web App URL)
+     - Requests get saved to a Google Sheet
+     - Weekly emails actually send via Apps Script's MailApp
+     - Multi-device: any admin/store login sees the same data
+
+================================
+HOW TO ENABLE LIVE MODE (10 min)
+================================
+
+STEP 1. Create a Google Sheet
+  - Go to https://sheets.new — name it "Savon Requests"
+  - Create two tabs: "Requests" and "Stores"
+  - Paste these headers in row 1 of "Requests":
+        id  timestamp  type  store  itemName  bottleSize  container  packSize  customerName  customerContact  notes  status
+  - Paste these headers in row 1 of "Stores":
+        name  email  password
+  - In the "Stores" tab, add your three stores:
+        TWINOAKS      savontwinoaks@gmail.com      twinoaks
+        Chesterfield  savonchesterfield@gmail.com  chesterfield
+        Edwardsville  savonedwardsville@gmail.com  edwardsville
+
+STEP 2. Open Apps Script
+  - In the Sheet, click  Extensions → Apps Script
+  - Delete any starter code, paste in the entire APPS SCRIPT block from
+    the file `apps_script.gs` that came alongside this HTML
+  - Click  Save  (disk icon)
+
+STEP 3. Deploy as a Web App
+  - Click  Deploy → New deployment
+  - Click the gear icon → select "Web app"
+  - Description: "Savon Requests API"
+  - Execute as: Me
+  - Who has access: Anyone
+  - Click  Deploy
+  - Authorize when prompted (it'll warn that it's "unverified" — click
+    Advanced → Go to ... → Allow). This is normal because YOU are the
+    developer.
+  - Copy the Web App URL it gives you (looks like
+    https://script.google.com/macros/s/AKfycb.../exec)
+
+STEP 4. Paste that URL into this HTML
+  - Open this index.html in any text editor
+  - Find  WEB_APP_URL: 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'
+  - Replace with the URL you copied
+
+STEP 5. Set the weekly auto-send trigger
+  - Back in Apps Script, click the clock icon (Triggers) on the left
+  - Click  + Add Trigger  (bottom right)
+  - Choose function: sendWeeklyDigest
+  - Event source: Time-driven
+  - Type: Week timer
+  - Day: Sunday, Time: 8pm to 9pm
+  - Save
+
+STEP 6. Host the HTML
+  - Easiest free options:
+      - GitHub Pages: drop index.html + logo.png in a repo, enable Pages
+      - Netlify Drop: https://app.netlify.com/drop  (just drag the folder)
+      - Vercel, Cloudflare Pages, etc.
+  - Place your transparent-PNG logo as `logo.png` in the same folder
+
+STEP 7. Change passwords
+  - Open this file, change ADMIN_PASSWORD from 'admin123' to something safe
+  - For each store, log into the Admin portal → Stores tab → Edit and set
+    a real password
+
+That's it. The customer form is your link; share it with customers.
+==================================================================== -->
+
+</body>
+</html>

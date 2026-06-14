@@ -10,7 +10,6 @@ No servers, no databases to maintain, **$0/month operating cost.**
 
 ![Screenshot placeholder](screenshot.png)
 
-> Drop `screenshot.png` of your customer form into the repo root for a stronger first impression. (Add it via Add file → Upload files on GitHub.)
 
 ---
 
